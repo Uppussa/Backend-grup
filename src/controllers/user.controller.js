@@ -6,25 +6,34 @@ import { SECRET_KEY } from '../config/config.js'
 
 
 export const create = async (req, res) => {
-    const { name, email, password, role, image, videos } = req.body
-    if (!name || !email || !password || !role) {
-        return res.status(400).json({ message: 'Please. Send all required fields' })
+    try {
+        const { name, email, password, role, nivel, matricula } = req.body;
+
+        // Validar que si el rol es 'student', se incluya la matrícula
+        if (role === 'student' && !matricula) {
+            return res.status(400).json({ message: 'Student must provide matricula' });
+        }
+
+        // Hash de la contraseña
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Crear nuevo usuario
+        const newUser = new User({
+            name,
+            email,
+            password: hashedPassword,
+            role,
+            nivel,
+            matricula: role === 'student' ? matricula : undefined  // Asignar matrícula solo si es estudiante
+        });
+
+        await newUser.save();
+
+        res.status(201).json({ message: 'User registered successfully' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-
-    const newUser = new User({
-        name,
-        email,
-        password: hashedPassword,
-        role,
-        image: image ?? null,
-        videos: videos ?? null
-    })
-    await newUser.save()
-    console.log(newUser);
-    res.status(201).json({ message: 'User created' })
-}
+};
 
 export const login = async (req, res) => {
     const { email, password } = req.body;
@@ -36,26 +45,32 @@ export const login = async (req, res) => {
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) return res.status(400).json({ message: 'Invalid password' });
 
-        const token = jwt.sign({ email: user.email, role: user.role}, SECRET_KEY, { expiresIn: '1h' });
+        const token = jwt.sign({ email: user.email, role: user.role }, SECRET_KEY, { expiresIn: '2h' });
 
         res.status(200).json({ message: 'User verified', token });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 };
- 
+
 export const getAll = async (req, res) => {
     try {
         const token = req.headers.authorization.split(' ')[1];
         const decodedToken = jwt.verify(token, SECRET_KEY);
-    
+
         const userEmail = decodedToken.email;
         const userRole = decodedToken.role;
-        const { email } = req.query; 
-    
+        const { email, matricula } = req.query;
+
         if (userRole === 'teacher') {
             if (email) {
                 const user = await User.findOne({ email });
+                if (!user) {
+                    return res.status(404).json({ message: 'User not found' });
+                }
+                res.json(user);
+            } else if (matricula) {
+                const user = await User.findOne({ matricula });
                 if (!user) {
                     return res.status(404).json({ message: 'User not found' });
                 }
@@ -77,11 +92,24 @@ export const getAll = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
-export const update = async (req, res) => {
-    const {image, videos } = req.body
-    const user = await  user.findByIdAndUpdate(req.params.id, {
-        image,
-        videos
-    })
-    res.json(user) 
-}
+
+export const updateImage = async (req, res) => {
+    try {
+        const token = req.headers.authorization.split(' ')[1];
+        const decodedToken = jwt.verify(token, SECRET_KEY);
+
+        const userEmail = decodedToken.email;
+        const image = req.file ? `/uploads/${req.file.filename}` : null;
+
+        if (!image) {
+            return res.status(400).json({ message: 'Profile image is required' });
+        }
+        const user = await User.findOneAndUpdate({ email: userEmail }, { image }, { new: true });
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        res.json({ message: 'Profile image updated successfully', user });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};

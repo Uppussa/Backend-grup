@@ -2,6 +2,8 @@ import { connectDB } from "./config/db.js";
 import express from 'express'
 import { PORT } from "./config/config.js";
 import  userRoutes  from "./routes/user.routes.js";
+import  videosRoutes  from "./routes/videos.routes.js";
+import  examsRoutes  from "./routes/exams.routes.js";
 import { validaCORS } from "./middlewares/middlewares.js";
 
 
@@ -15,7 +17,8 @@ connectDB();
 
 
 app.use('/users', userRoutes)
-
+app.use('/videos', videosRoutes)
+app.use('/exams', examsRoutes)
 
 
 app.listen(PORT, () => { console.log(`Server on port http://localhost:${PORT} `)})

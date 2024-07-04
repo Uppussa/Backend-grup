@@ -12,11 +12,13 @@ const VideoSchema = new Schema({
     },
     matricula: {
         type: String,
-        required: true
+        required: true,
+        
     },
     user: {
         type: Schema.Types.ObjectId,
-        ref: 'User'
+        ref: 'User',
+        required: true
     },
     date: {
         type: Date,

@@ -8,17 +8,17 @@ import { validaCORS } from "./middlewares/middlewares.js";
 
 
 
-const app = express()
-app.use(validaCORS)
+const app = express() // Crear una instancia de express
+app.use(validaCORS)     // Middleware para validar CORS
 app.use(express.json()) // Para que pueda recibir datos en formato JSON
 app.use(express.urlencoded({ extended: true }))   // Para que pueda recibir datos de formularios
 
-connectDB(); 
+connectDB();  // Conectar a la base de datos
 
 
-app.use('/users', userRoutes)
-app.use('/videos', videosRoutes)
-app.use('/exams', examsRoutes)
+app.use('/users', userRoutes) // Rutas de usuarios
+app.use('/videos', videosRoutes) // Rutas de videos
+app.use('/exams', examsRoutes) // Rutas de exámenes
 
 
 app.listen(PORT, () => { console.log(`Server on port http://localhost:${PORT} `)})

@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import { SECRET_KEY } from '../config/config.js';
 
 
-
+// Crear un video
 export const createVideo = async (req, res) => {
     try {
         const token = req.headers.authorization.split(' ')[1]; // Bearer token 
@@ -12,7 +12,7 @@ export const createVideo = async (req, res) => {
 
         const userEmail = decodedToken.email; // Extraer email del token
         const userRole = decodedToken.role; // Extraer role del token
-        const user = await User.findOne({ email: userEmail, role: userRole}); // Buscar usuario por email y role
+        const user = await User.findOne({ email: userEmail, role: userRole }); // Buscar usuario por email y role
 
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
@@ -23,7 +23,9 @@ export const createVideo = async (req, res) => {
         }
 
         const { title, description } = req.body; // Extraer datos del body
-
+        if (!title || !description) {
+            return res.status(400).json({ message: 'Title and description are required' });
+        }
         const newVideo = new Video({
             title,  // Crear nuevo video
             matricula: user.matricula,  // Asignar matricula del usuario al video
@@ -41,6 +43,16 @@ export const createVideo = async (req, res) => {
 // Obtener todos los videos
 export const getVideos = async (req, res) => {
     try {
+        const token = req.headers.authorization.split(' ')[1]; // Bearer token 
+        const decodedToken = jwt.verify(token, SECRET_KEY); // Decodificar token
+
+        const userEmail = decodedToken.email; // Extraer email del token
+        const userRole = decodedToken.role; // Extraer role del token
+        const user = await User.findOne({ email: userEmail, role: userRole }); // Buscar usuario por email y role
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
         const videos = await Video.find().populate('user', 'name email matricula');
         res.status(200).json(videos);
     } catch (error) {
@@ -51,6 +63,16 @@ export const getVideos = async (req, res) => {
 // Obtener un video por ID
 export const getVideoById = async (req, res) => {
     try {
+        const token = req.headers.authorization.split(' ')[1]; // Bearer token 
+        const decodedToken = jwt.verify(token, SECRET_KEY); // Decodificar token
+
+        const userEmail = decodedToken.email; // Extraer email del token
+        const userRole = decodedToken.role; // Extraer role del token
+        const user = await User.findOne({ email: userEmail, role: userRole }); // Buscar usuario por email y role
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
         const { id } = req.params;
         const video = await Video.findById(id).populate('user', 'name email matricula');
         if (!video) {
@@ -65,12 +87,24 @@ export const getVideoById = async (req, res) => {
 // Actualizar un video
 export const updateVideo = async (req, res) => {
     try {
-        const { id } = req.params;
-        const { title, url, description } = req.body;
+        const token = req.headers.authorization.split(' ')[1]; // Bearer token 
+        const decodedToken = jwt.verify(token, SECRET_KEY); // Decodificar token
 
+        const userEmail = decodedToken.email; // Extraer email del token
+        const userRole = decodedToken.role; // Extraer role del token
+        const user = await User.findOne({ email: userEmail, role: userRole }); // Buscar usuario por email y role
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        const { id } = req.params; // Extraer id del video
+        const { title, description } = req.body; // Extraer datos del body
+        if (!title || !description) {
+            return res.status(400).json({ message: 'Title and description are required' });
+        }
         const video = await Video.findByIdAndUpdate(
             id,
-            { title, url, description },
+            { title, description },
             { new: true }
         );
 
@@ -87,8 +121,18 @@ export const updateVideo = async (req, res) => {
 // Eliminar un video
 export const deleteVideo = async (req, res) => {
     try {
-        const { id } = req.params;
-        const video = await Video.findByIdAndDelete(id);
+        const token = req.headers.authorization.split(' ')[1]; // Bearer token 
+        const decodedToken = jwt.verify(token, SECRET_KEY); // Decodificar token
+
+        const userEmail = decodedToken.email; // Extraer email del token
+        const userRole = decodedToken.role; // Extraer role del token
+        const user = await User.findOne({ email: userEmail, role: userRole }); // Buscar usuario por email y role
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        const { id } = req.params;  // Extraer id del video
+        const video = await Video.findByIdAndDelete(id); // Buscar y eliminar video por id
         if (!video) {
             return res.status(404).json({ message: 'Video not found' });
         }

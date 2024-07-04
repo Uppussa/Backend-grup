@@ -2,9 +2,19 @@ import { Schema, model } from 'mongoose';
 import mongoose from 'mongoose';
 
 const ExamSchema = new Schema({
-    title: { type: String, required: true },
-    description: { type: String, required: true },
-    level: { type: String, required: true },
+    title: { 
+        type: String,
+         required: true 
+        },
+    description: {
+         type: String,
+          required: true
+         },
+    nivel: {
+         type: String,
+         enum: ['Elementary', 'A1', 'A2', 'B1', 'B2'], 
+          required: true 
+        },
     questions: [
         {
             question: { type: String, required: true },
@@ -17,16 +27,15 @@ const ExamSchema = new Schema({
         ref: 'User', 
         required: false // Asegúrate de que no sea requerido
     },
-    assignedTo: [{ 
-        type: mongoose.Schema.Types.ObjectId, 
-        ref: 'User' 
-    }],
-    grades: [
-        {
-            student: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-            grade: { type: Number }
-        }
-    ]
+
+    date: { 
+        type: Date, 
+        default: Date.now 
+    },
+    score: { 
+        type: Number, 
+        default: null  
+    }
 }, { 
     timestamps: true 
 });

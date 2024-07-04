@@ -4,7 +4,45 @@ import jwt from 'jsonwebtoken';
 import { SECRET_KEY } from '../config/config.js ';
 
 
-export const createExam = async (req, res) => {
+export const createExam = async (req, res) => { // Crear un examen // solo el maestro puede crear un examen
+    try {
+        const token = req.headers.authorization.split(' ')[1]; // Obtener token del header
+        const decodedToken = jwt.verify(token, SECRET_KEY); // Verificar token
+
+        const userEmail = decodedToken.email; // Obtener email del token
+        const userRole = decodedToken.role; // Obtener rol del token
+        const user = await User.findOne({ email: userEmail, role: userRole }); // Buscar usuario por email
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        if (user.role !== 'teacher') {
+            return res.status(403).json({ message: 'Only teachers can create exams' });
+        }
+ 
+        const { title, description, nivel, questions } = req.body; // Obtener datos del cuerpo de la solicitud
+        
+        if (!title || !description || !nivel || !questions || !Array.isArray(questions) || questions.length === 0) { // Validar campos
+            return res.status(400).json({ message: 'All fields are required and questions must be a non-empty array' }); // Enviar respuesta de error
+        }
+        const newExam = new Exam({ // Crear un nuevo examen
+            title,  // Asignar título
+            description,    // Asignar descripción
+            nivel,  // Asignar nivel
+            questions, // Asignar preguntas
+            createdBy: user._id, // Asociar el ID del creador del examen
+        });
+
+        await newExam.save();
+        res.status(201).json({ message: 'Exam created successfully', exam: newExam });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+
+export const getAllExams = async (req, res) => {    // Obtener todos los exámenes // el maestro no puede manejar esta pocion
     try {
         const token = req.headers.authorization.split(' ')[1]; // Obtener token del header
         const decodedToken = jwt.verify(token, SECRET_KEY); // Verificar token
@@ -21,114 +59,76 @@ export const createExam = async (req, res) => {
             return res.status(403).json({ message: 'Only teachers can create exams' });
         }
 
-        const { title, description, level, questions } = req.body;
-
-        const newExam = new Exam({
-            title,
-            description,
-            level,
-            questions,
-            createdBy: user._id, // Asociar el ID del creador del examen
-        });
-
-        await newExam.save();
-        res.status(201).json({ message: 'Exam created successfully', exam: newExam });
+        const exams = await Exam.find().populate('createdBy', 'name');  // Obtener todos los exámenes y mostrar solo el nombre del creador
+        res.status(200).json(exams);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 };
-// // Otros controladores
 
-// export const getAllExams = async (req, res) => {
-//     try {
-//         const exams = await Exam.find().populate('createdBy', 'name');
-//         res.status(200).json(exams);
-//     } catch (error) {
-//         res.status(500).json({ message: error.message });
-//     }
-// };
+export const getExamById = async (req, res) => { // Obtener un examen por ID    // el maestro no puede manejar esta pocion
+    try {
+        const exam = await Exam.findById(req.params.id).populate('createdBy', 'name'); // Buscar examen por ID y mostrar solo el nombre del creador
+        if (!exam) {
+            return res.status(404).json({ message: 'Exam not found' });
+        }
+        res.status(200).json(exam);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
 
-// export const getExamById = async (req, res) => {
-//     try {
-//         const exam = await Exam.findById(req.params.id).populate('createdBy', 'name');
-//         if (!exam) {
-//             return res.status(404).json({ message: 'Exam not found' });
-//         }
-//         res.status(200).json(exam);
-//     } catch (error) {
-//         res.status(500).json({ message: error.message });
-//     }
-// };
+export const updateExam = async (req, res) => { // Actualizar un examen // solo el maestro puede actualizar un examen
+    const { title, description, nivel, questions } = req.body; // Obtener datos del cuerpo de la solicitud
 
-// export const updateExam = async (req, res) => {
-//     const { questions } = req.body;
+    try {
+        const exam = await Exam.findById(req.params.id);    // Buscar examen por ID
+        if (!exam) {
+            return res.status(404).json({ message: 'Exam not found' });
+        }
 
-//     try {
-//         const exam = await Exam.findById(req.params.id);
-//         if (!exam) {
-//             return res.status(404).json({ message: 'Exam not found' });
-//         }
+        // Validaciones adicionales
+        if (nivel && !['Elementary', 'A1', 'A2', 'B1', 'B2'].includes(nivel)) { // Validar nivel
+            return res.status(400).json({ message: 'Invalid nivel' });
+        }
 
-//         exam.questions = questions;
-//         await exam.save();
-//         res.status(200).json({ message: 'Exam updated successfully', exam });
-//     } catch (error) {
-//         res.status(500).json({ message: error.message });
-//     }
-// };
+        if (questions) {
+            if (!Array.isArray(questions) || questions.length === 0) { // Validar preguntas
+                return res.status(400).json({ message: 'Questions must be a non-empty array' });
+            }
+            // Verificar que cada pregunta tiene la estructura correcta
+            const isValid = questions.every(q =>  // Validar preguntas
+                q.question && Array.isArray(q.options) && q.options.length > 0 && q.correctOption 
+            );
+            if (!isValid) {
+                return res.status(400).json({ message: 'Invalid question structure' });
+            }
+        }
 
-// export const submitExam = async (req, res) => {
-//     const { answers } = req.body;
-//     const studentId = req.user.id;
+        // Actualizar los campos si se proporcionan en la solicitud
+        if (title) exam.title = title;  // Actualizar título
+        if (description) exam.description = description; // Actualizar descripción
+        if (nivel) exam.nivel = nivel; // Actualizar nivel
+        if (questions) exam.questions = questions; // Actualizar preguntas
 
-//     try {
-//         const exam = await Exam.findById(req.params.id);
-//         if (!exam) {
-//             return res.status(404).json({ message: 'Exam not found' });
-//         }
+        // Guardar los cambios
+        await exam.save();
 
-//         // Calculate grade
-//         let grade = 0;
-//         answers.forEach((answer, index) => {
-//             if (answer === exam.questions[index].correctOption) {
-//                 grade += 1;
-//             }
-//         });
+        res.status(200).json({ message: 'Exam updated successfully', exam });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
 
-//         const gradeEntry = {
-//             student: studentId,
-//             grade
-//         };
+export const deleteExam = async (req, res) => { // Eliminar un examen // solo el maestro puede eliminar un examen
+    try {
+        const exam = await Exam.findByIdAndDelete(req.params.id); // Buscar examen por ID y eliminarlo
+        if (!exam) {
+            return res.status(404).json({ message: 'Exam not found' });
+        }
+        res.status(200).json({ message: 'Exam deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
 
-//         exam.grades.push(gradeEntry);
-//         await exam.save();
-
-//         res.status(200).json({ message: 'Exam submitted successfully', grade });
-//     } catch (error) {
-//         res.status(500).json({ message: error.message });
-//     }
-// };
-// export const deleteExam = async (req, res) => {
-//     try {
-//         const exam = await Exam.findByIdAndDelete(req.params.id);
-//         if (!exam) {
-//             return res.status(404).json({ message: 'Exam not found' });
-//         }
-//         res.status(200).json({ message: 'Exam deleted successfully' });
-//     } catch (error) {
-//         res.status(500).json({ message: error.message });
-//     }
-// };
-
-// {
-//     //     "title": "Examen de Matemáticas",
-//     //     "description": "Este es un examen de prueba",
-//     //     "level": "intermedio",
-//     //     "questions": [
-//     //       {
-//     //         "question": "¿Cuánto es 2 + 2?",
-//     //         "options": ["3", "4", "5"],
-//     //         "correctOption": 4
-//     //       }
-//     //     ]
-//     //   }

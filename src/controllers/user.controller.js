@@ -99,11 +99,11 @@ export const updateImage = async (req, res) => {
         if (!image) {
             return res.status(400).json({ message: 'Profile image is required' }); // Si no hay imagen
         }
-        const user = await User.findOneAndUpdate({ email: userEmail }, { image }, { new: true }); // Actualizar imagen de perfil
+        const user = await User.findOneAndUpdate({ email: userEmail }, { profileImage: image }, { new: true }); // Actualizar imagen de perfil
         if (!user) {
             return res.status(404).json({ message: 'User not found' });     // Si no se encuentra el usuario
         }
-        res.json({ message: 'Profile image updated successfully', user });  // Enviar mensaje de éxito
+        res.json({ message: 'Profile image updated successfully' });  // Enviar mensaje de éxito
     } catch (error) {
         res.status(500).json({ message: error.message }); // Enviar error
     }

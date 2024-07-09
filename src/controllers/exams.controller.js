@@ -6,24 +6,24 @@ import { SECRET_KEY } from '../config/config.js ';
 
 export const createExam = async (req, res) => { // Crear un examen // solo el maestro puede crear un examen
     try {
-        const token = req.headers.authorization.split(' ')[1]; // Obtener token del header
-        const decodedToken = jwt.verify(token, SECRET_KEY); // Verificar token
+        // const token = req.headers.authorization.split(' ')[1]; // Obtener token del header
+        // const decodedToken = jwt.verify(token, SECRET_KEY); // Verificar token
 
-        const userEmail = decodedToken.email; // Obtener email del token
-        const userRole = decodedToken.role; // Obtener rol del token
-        const user = await User.findOne({ email: userEmail, role: userRole }); // Buscar usuario por email
+        // const userEmail = decodedToken.email; // Obtener email del token
+        // const userRole = decodedToken.role; // Obtener rol del token
+        // const user = await User.findOne({ email: userEmail, role: userRole }); // Buscar usuario por email
 
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
+        // if (!user) {
+        //     return res.status(404).json({ message: 'User not found' });
+        // }
 
-        if (user.role !== 'teacher') {
-            return res.status(403).json({ message: 'Only teachers can create exams' });
-        }
+        // if (user.role !== 'teacher') {
+        //     return res.status(403).json({ message: 'Only teachers can create exams' });
+        // }
  
-        const { title, description, nivel, questions } = req.body; // Obtener datos del cuerpo de la solicitud
+        const { title, description, nivel, questions,  duration } = req.body; // Obtener datos del cuerpo de la solicitud
         
-        if (!title || !description || !nivel || !questions || !Array.isArray(questions) || questions.length === 0) { // Validar campos
+        if (!title || !description || !nivel || !questions  || !duration || !Array.isArray(questions) || questions.length === 0) { // Validar campos
             return res.status(400).json({ message: 'All fields are required and questions must be a non-empty array' }); // Enviar respuesta de error
         }
         const newExam = new Exam({ // Crear un nuevo examen
@@ -31,7 +31,8 @@ export const createExam = async (req, res) => { // Crear un examen // solo el ma
             description,    // Asignar descripción
             nivel,  // Asignar nivel
             questions, // Asignar preguntas
-            createdBy: user._id, // Asociar el ID del creador del examen
+            createdBy: req.user ? req.user._id : null,
+            duration, // Asignar dur
         });
 
         await newExam.save();
@@ -42,24 +43,9 @@ export const createExam = async (req, res) => { // Crear un examen // solo el ma
 };
 
 
-export const getAllExams = async (req, res) => {    // Obtener todos los exámenes // el maestro no puede manejar esta pocion
+export const getAllExams = async (req, res) => {
     try {
-        const token = req.headers.authorization.split(' ')[1]; // Obtener token del header
-        const decodedToken = jwt.verify(token, SECRET_KEY); // Verificar token
-
-        const userEmail = decodedToken.email; // Obtener email del token
-        const userRole = decodedToken.role; // Obtener rol del token
-        const user = await User.findOne({ email: userEmail, role: userRole }); // Buscar usuario por email
-
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-
-        if (user.role !== 'teacher') {
-            return res.status(403).json({ message: 'Only teachers can create exams' });
-        }
-
-        const exams = await Exam.find().populate('createdBy', 'name');  // Obtener todos los exámenes y mostrar solo el nombre del creador
+        const exams = await Exam.find().populate('createdBy', 'name'); // Obtener todos los exámenes y mostrar solo el nombre del creador
         res.status(200).json(exams);
     } catch (error) {
         res.status(500).json({ message: error.message });

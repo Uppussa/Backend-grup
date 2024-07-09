@@ -75,9 +75,9 @@ export const getVideoById = async (req, res) => {
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
-        const { id } = req.params;
-        const video = await Video.findById(id).populate('user', 'name email matricula');
-        if (!video) {
+        const { id } = req.params; // Extraer id del video
+        const video = await Video.findById(id).populate('user', 'name email matricula'); // Buscar video por id y mostrar solo el nombre, email y matricula del usuario
+        if (!video) { // Verificar si el video existe
             return res.status(404).json({ message: 'Video not found' });
         }
         res.status(200).json(video);
@@ -99,28 +99,21 @@ export const updateVideo = async (req, res) => {
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
-
         const { id } = req.params;
         const { title, description } = req.body;
 
         if (!title || !description) {
             return res.status(400).json({ message: 'Title and description are required' });
         }
-
         const updateData = { title, description };
-
         if (req.file) {
-            // Usar 'videos' en lugar de 'video' si ese es el nombre del campo en tu formulario
             updateData.videos = `/uploads/${req.file.filename}`;
             console.log("Video actualizado:", updateData.videos);
         }
-
         const video = await Video.findByIdAndUpdate(id, updateData, { new: true }).select('-__v');
-
         if (!video) {
             return res.status(404).json({ message: 'Video not found' });
         }
-
         res.status(200).json({ message: 'Video updated successfully', video }); //video colocar para prueba
     } catch (error) {
         console.error("Error en updateVideo:", error);
